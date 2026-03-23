@@ -119,8 +119,15 @@ class GMC_Admin {
 			wp_die( esc_html__( 'No tienes permisos para acceder a esta página.', 'gestion-masiva-categorias' ) );
 		}
 
-		$posts      = $this->post_service->get_posts( 20 );
-		$categories = $this->category_service->get_categories( 50 );
+		$current_page = isset( $_GET['gmc_page_num'] ) ? absint( wp_unslash( $_GET['gmc_page_num'] ) ) : 1;
+		$current_page = max( 1, $current_page );
+		$per_page     = 20;
+
+		$post_data   = $this->post_service->get_posts( $current_page, $per_page );
+		$posts       = isset( $post_data['items'] ) ? $post_data['items'] : array();
+		$pagination  = isset( $post_data['pagination'] ) ? $post_data['pagination'] : array();
+		$categories  = $this->category_service->get_categories( 50 );
+		$total_pages = isset( $pagination['total_pages'] ) ? (int) $pagination['total_pages'] : 1;
 		?>
 		<div class="wrap gmc-admin-page">
 			<div class="gmc-cyber-shell">
@@ -225,7 +232,16 @@ class GMC_Admin {
 							</div>
 						<?php else : ?>
 							<p class="gmc-list-meta">
-								<?php echo esc_html__( 'Mostrando hasta 20 posts estándar.', 'gestion-masiva-categorias' ); ?>
+								<?php
+								echo esc_html(
+									sprintf(
+										/* translators: 1: current page number, 2: total pages. */
+										__( 'Página %1$d de %2$d.', 'gestion-masiva-categorias' ),
+										(int) $pagination['current_page'],
+										max( 1, $total_pages )
+									)
+								);
+								?>
 							</p>
 
 							<div class="gmc-post-list">
@@ -278,6 +294,8 @@ class GMC_Admin {
 								<?php endforeach; ?>
 							</div>
 
+							<?php $this->render_pagination( $pagination ); ?>
+
 							<script>
 								document.addEventListener('DOMContentLoaded', function () {
 									const checkboxes = document.querySelectorAll('.gmc-post-checkbox');
@@ -312,6 +330,67 @@ class GMC_Admin {
 					</div>
 				</div>
 			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Renderiza paginación simple.
+	 *
+	 * @param array<string, mixed> $pagination Datos de paginación.
+	 * @return void
+	 */
+	private function render_pagination( array $pagination ) {
+		$current_page = isset( $pagination['current_page'] ) ? (int) $pagination['current_page'] : 1;
+		$total_pages  = isset( $pagination['total_pages'] ) ? (int) $pagination['total_pages'] : 1;
+		$has_previous = ! empty( $pagination['has_previous'] );
+		$has_next     = ! empty( $pagination['has_next'] );
+
+		if ( $total_pages <= 1 ) {
+			return;
+		}
+
+		$previous_url = add_query_arg(
+			array(
+				'page'         => 'gestion-masiva-categorias',
+				'gmc_page_num' => max( 1, $current_page - 1 ),
+			),
+			admin_url( 'admin.php' )
+		);
+
+		$next_url = add_query_arg(
+			array(
+				'page'         => 'gestion-masiva-categorias',
+				'gmc_page_num' => $current_page + 1,
+			),
+			admin_url( 'admin.php' )
+		);
+		?>
+		<div class="gmc-pagination">
+			<?php if ( $has_previous ) : ?>
+				<a class="button gmc-button-secondary" href="<?php echo esc_url( $previous_url ); ?>">
+					<?php echo esc_html__( '← Anterior', 'gestion-masiva-categorias' ); ?>
+				</a>
+			<?php endif; ?>
+
+			<span class="gmc-pagination-info">
+				<?php
+				echo esc_html(
+					sprintf(
+						/* translators: 1: current page number, 2: total pages. */
+						__( 'Página %1$d de %2$d', 'gestion-masiva-categorias' ),
+						$current_page,
+						$total_pages
+					)
+				);
+				?>
+			</span>
+
+			<?php if ( $has_next ) : ?>
+				<a class="button gmc-button-secondary" href="<?php echo esc_url( $next_url ); ?>">
+					<?php echo esc_html__( 'Siguiente →', 'gestion-masiva-categorias' ); ?>
+				</a>
+			<?php endif; ?>
 		</div>
 		<?php
 	}

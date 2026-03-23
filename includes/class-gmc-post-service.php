@@ -15,60 +15,74 @@ if ( ! defined( 'ABSPATH' ) ) {
 class GMC_Post_Service {
 
 	/**
-	 * Obtiene un listado simple de posts con sus categorías actuales.
+	 * Obtiene un listado paginado de posts con sus categorías actuales.
 	 *
-	 * @param int $limit Límite máximo de resultados.
-	 * @return array<int, array<string, mixed>>
+	 * @param int $page     Página actual.
+	 * @param int $per_page Límite fijo por página.
+	 * @return array<string, mixed>
 	 */
-	public function get_posts( $limit = 20 ) {
-		$limit = absint( $limit );
+	public function get_posts( $page = 1, $per_page = 20 ) {
+		$page     = absint( $page );
+		$per_page = absint( $per_page );
 
-		if ( $limit <= 0 ) {
-			$limit = 20;
+		if ( $page <= 0 ) {
+			$page = 1;
+		}
+
+		if ( $per_page <= 0 ) {
+			$per_page = 20;
 		}
 
 		$query = new WP_Query(
 			array(
 				'post_type'              => 'post',
 				'post_status'            => array( 'publish', 'draft', 'pending', 'future', 'private' ),
-				'posts_per_page'         => $limit,
+				'posts_per_page'         => $per_page,
+				'paged'                  => $page,
 				'orderby'                => 'date',
 				'order'                  => 'DESC',
-				'no_found_rows'          => true,
 				'ignore_sticky_posts'    => true,
 				'update_post_meta_cache' => false,
 			)
 		);
 
-		if ( empty( $query->posts ) ) {
-			return array();
-		}
-
 		$items = array();
 
-		foreach ( $query->posts as $post ) {
-			$categories = get_the_category( $post->ID );
-			$normalized_categories = array();
+		if ( ! empty( $query->posts ) ) {
+			foreach ( $query->posts as $post ) {
+				$categories            = get_the_category( $post->ID );
+				$normalized_categories = array();
 
-			if ( ! empty( $categories ) && ! is_wp_error( $categories ) ) {
-				foreach ( $categories as $category ) {
-					$normalized_categories[] = array(
-						'id'   => (int) $category->term_id,
-						'name' => $category->name,
-					);
+				if ( ! empty( $categories ) && ! is_wp_error( $categories ) ) {
+					foreach ( $categories as $category ) {
+						$normalized_categories[] = array(
+							'id'   => (int) $category->term_id,
+							'name' => $category->name,
+						);
+					}
 				}
-			}
 
-			$items[] = array(
-				'id'         => (int) $post->ID,
-				'title'      => get_the_title( $post->ID ),
-				'status'     => get_post_status( $post->ID ),
-				'categories' => $normalized_categories,
-			);
+				$items[] = array(
+					'id'         => (int) $post->ID,
+					'title'      => get_the_title( $post->ID ),
+					'status'     => get_post_status( $post->ID ),
+					'categories' => $normalized_categories,
+				);
+			}
 		}
 
 		wp_reset_postdata();
 
-		return $items;
+		return array(
+			'items'      => $items,
+			'pagination' => array(
+				'current_page' => (int) $page,
+				'per_page'     => (int) $per_page,
+				'total_items'  => (int) $query->found_posts,
+				'total_pages'  => (int) $query->max_num_pages,
+				'has_previous' => $page > 1,
+				'has_next'     => $page < (int) $query->max_num_pages,
+			),
+		);
 	}
 }
