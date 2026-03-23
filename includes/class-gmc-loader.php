@@ -17,10 +17,29 @@ require_once GMC_PLUGIN_PATH . 'admin/class-gmc-admin.php';
 class GMC_Loader {
 
 	/**
+	 * Módulo admin.
+	 *
+	 * @var GMC_Admin
+	 */
+	private $admin;
+
+	/**
 	 * Constructor.
 	 */
 	public function __construct() {
-		// Solo carga archivos. Sin instancias todavía.
+		$category_service        = new GMC_Category_Service();
+		$category_detail_service = new GMC_Category_Detail_Service();
+		$category_update_service = new GMC_Category_Update_Service();
+		$post_service            = new GMC_Post_Service();
+		$post_category_service   = new GMC_Post_Category_Service();
+
+		$this->admin = new GMC_Admin(
+			$category_service,
+			$category_detail_service,
+			$category_update_service,
+			$post_service,
+			$post_category_service
+		);
 	}
 
 	/**
@@ -29,6 +48,11 @@ class GMC_Loader {
 	 * @return void
 	 */
 	public function run() {
-		// Base mínima.
+		if ( is_admin() ) {
+			add_action( 'admin_menu', array( $this->admin, 'register_admin_menu' ) );
+			add_action( 'admin_post_gmc_add_categories', array( $this->admin, 'handle_add_categories_action' ) );
+			add_action( 'admin_post_gmc_remove_categories', array( $this->admin, 'handle_remove_categories_action' ) );
+			add_action( 'admin_post_gmc_update_category', array( $this->admin, 'handle_update_category_action' ) );
+		}
 	}
 }
