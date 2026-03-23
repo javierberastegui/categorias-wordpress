@@ -17,11 +17,11 @@ class GMC_Category_Update_Service {
 	/**
 	 * Actualiza una categoría concreta.
 	 *
-	 * @param int    $category_id          ID de la categoría.
-	 * @param string $name                 Nombre.
-	 * @param string $description          Descripción.
-	 * @param string $slug                 Slug.
-	 * @param bool   $confirm_slug_change  Confirmación explícita de cambio de slug.
+	 * @param int    $category_id         ID de la categoría.
+	 * @param string $name                Nombre.
+	 * @param string $description         Descripción.
+	 * @param string $slug                Slug.
+	 * @param bool   $confirm_slug_change Confirmación explícita de cambio de slug.
 	 * @return array<string, mixed>
 	 */
 	public function update_category( $category_id, $name, $description, $slug, $confirm_slug_change = false ) {
@@ -62,6 +62,10 @@ class GMC_Category_Update_Service {
 			return array(
 				'success' => false,
 				'message' => __( 'Has cambiado el slug. Debes confirmar explícitamente que quieres modificar la URL de esta categoría.', 'gestion-masiva-categorias' ),
+				'slug_changed' => true,
+				'old_slug'     => $current_slug,
+				'new_slug'     => $new_slug,
+				'term_id'      => $category_id,
 			);
 		}
 
@@ -77,14 +81,22 @@ class GMC_Category_Update_Service {
 			return array(
 				'success' => false,
 				'message' => $result->get_error_message(),
+				'slug_changed' => $slug_changed,
+				'old_slug'     => $current_slug,
+				'new_slug'     => $new_slug,
+				'term_id'      => $category_id,
 			);
 		}
 
 		return array(
-			'success' => true,
-			'message' => $slug_changed
+			'success'      => true,
+			'message'      => $slug_changed
 				? __( 'Categoría actualizada correctamente. El slug ha sido modificado.', 'gestion-masiva-categorias' )
 				: __( 'Categoría actualizada correctamente.', 'gestion-masiva-categorias' ),
+			'slug_changed' => $slug_changed,
+			'old_slug'     => $current_slug,
+			'new_slug'     => $new_slug,
+			'term_id'      => $category_id,
 		);
 	}
 }
