@@ -4,72 +4,113 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+require_once GMC_PLUGIN_PATH . 'includes/class-gmc-category-service.php';
+require_once GMC_PLUGIN_PATH . 'includes/class-gmc-category-detail-service.php';
+require_once GMC_PLUGIN_PATH . 'includes/class-gmc-category-update-service.php';
+require_once GMC_PLUGIN_PATH . 'includes/class-gmc-post-service.php';
+require_once GMC_PLUGIN_PATH . 'includes/class-gmc-post-category-service.php';
+require_once GMC_PLUGIN_PATH . 'admin/class-gmc-admin.php';
+
 /**
- * Servicio de actualización de categorías.
+ * Loader principal del plugin.
  *
  * Responsabilidad única:
- * - Validar y actualizar una categoría concreta.
- * - No renderiza HTML.
- * - No procesa requests del admin.
+ * - Cargar módulos.
+ * - Registrar hooks base.
  */
-class GMC_Category_Update_Service {
+class GMC_Loader {
 
 	/**
-	 * Actualiza una categoría concreta.
+	 * Módulo de administración.
 	 *
-	 * @param int    $category_id ID de la categoría.
-	 * @param string $name        Nombre.
-	 * @param string $description Descripción.
-	 * @param string $slug        Slug.
-	 * @return array<string, mixed>
+	 * @var GMC_Admin
 	 */
-	public function update_category( $category_id, $name, $description, $slug ) {
-		$category_id = absint( $category_id );
-		$name        = sanitize_text_field( $name );
-		$description = sanitize_textarea_field( $description );
-		$slug        = sanitize_title( $slug );
+	private $admin;
 
-		if ( $category_id <= 0 ) {
-			return array(
-				'success' => false,
-				'message' => __( 'La categoría indicada no es válida.', 'gestion-masiva-categorias' ),
-			);
-		}
+	/**
+	 * Servicio de categorías.
+	 *
+	 * @var GMC_Category_Service
+	 */
+	private $category_service;
 
-		$term = get_term( $category_id, 'category' );
+	/**
+	 * Servicio de detalle de categoría.
+	 *
+	 * @var GMC_Category_Detail_Service
+	 */
+	private $category_detail_service;
 
-		if ( ! $term || is_wp_error( $term ) ) {
-			return array(
-				'success' => false,
-				'message' => __( 'La categoría indicada no existe.', 'gestion-masiva-categorias' ),
-			);
-		}
+	/**
+	 * Servicio de actualización de categoría.
+	 *
+	 * @var GMC_Category_Update_Service
+	 */
+	private $category_update_service;
 
-		if ( '' === $name ) {
-			return array(
-				'success' => false,
-				'message' => __( 'El nombre de la categoría no puede estar vacío.', 'gestion-masiva-categorias' ),
-			);
-		}
+	/**
+	 * Servicio de posts.
+	 *
+	 * @var GMC_Post_Service
+	 */
+	private $post_service;
 
-		$args = array(
-			'name'        => $name,
-			'description' => $description,
-			'slug'        => $slug,
+	/**
+	 * Servicio de relación post-categoría.
+	 *
+	 * @var GMC_Post_Category_Service
+	 */
+	private $post_category_service;
+
+	/**
+	 * Constructor.
+	 */
+	public function __construct() {
+		$this->load_dependencies();
+		$this->define_admin_hooks();
+	}
+
+	/**
+	 * Carga dependencias mínimas.
+	 *
+	 * @return void
+	 */
+	private function load_dependencies() {
+		$this->category_service        = new GMC_Category_Service();
+		$this->category_detail_service = new GMC_Category_Detail_Service();
+		$this->category_update_service = new GMC_Category_Update_Service();
+		$this->post_service            = new GMC_Post_Service();
+		$this->post_category_service   = new GMC_Post_Category_Service();
+
+		$this->admin = new GMC_Admin(
+			$this->category_service,
+			$this->category_detail_service,
+			$this->category_update_service,
+			$this->post_service,
+			$this->post_category_service
 		);
+	}
 
-		$result = wp_update_term( $category_id, 'category', $args );
-
-		if ( is_wp_error( $result ) ) {
-			return array(
-				'success' => false,
-				'message' => $result->get_error_message(),
-			);
+	/**
+	 * Registra hooks del área admin.
+	 *
+	 * @return void
+	 */
+	private function define_admin_hooks() {
+		if ( is_admin() ) {
+			add_action( 'admin_menu', array( $this->admin, 'register_admin_menu' ) );
+			add_action( 'admin_post_gmc_add_categories', array( $this->admin, 'handle_add_categories_action' ) );
+			add_action( 'admin_post_gmc_remove_categories', array( $this->admin, 'handle_remove_categories_action' ) );
+			add_action( 'admin_post_gmc_update_category', array( $this->admin, 'handle_update_category_action' ) );
 		}
+	}
 
-		return array(
-			'success' => true,
-			'message' => __( 'Categoría actualizada correctamente.', 'gestion-masiva-categorias' ),
-		);
+	/**
+	 * Método de arranque.
+	 *
+	 * @return void
+	 */
+	public function run() {
+		// Base lista para crecer en siguientes etapas.
 	}
 }
