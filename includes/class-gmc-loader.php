@@ -79,6 +79,7 @@ class GMC_Loader {
 		if ( is_admin() ) {
 			add_action( 'admin_menu', array( $this->admin, 'register_admin_menu' ) );
 			add_action( 'admin_post_gmc_add_categories', array( $this->admin, 'handle_add_categories_action' ) );
+			add_action( 'admin_post_gmc_remove_categories', array( $this->admin, 'handle_remove_categories_action' ) );
 		}
 	}
 
