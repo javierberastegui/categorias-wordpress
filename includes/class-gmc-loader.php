@@ -7,6 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 require_once GMC_PLUGIN_PATH . 'includes/class-gmc-category-service.php';
 require_once GMC_PLUGIN_PATH . 'includes/class-gmc-category-detail-service.php';
 require_once GMC_PLUGIN_PATH . 'includes/class-gmc-category-update-service.php';
+require_once GMC_PLUGIN_PATH . 'includes/class-gmc-category-slug-change-service.php';
 require_once GMC_PLUGIN_PATH . 'includes/class-gmc-post-service.php';
 require_once GMC_PLUGIN_PATH . 'includes/class-gmc-post-category-service.php';
 require_once GMC_PLUGIN_PATH . 'admin/class-gmc-admin.php';
@@ -27,16 +28,18 @@ class GMC_Loader {
 	 * Constructor.
 	 */
 	public function __construct() {
-		$category_service        = new GMC_Category_Service();
-		$category_detail_service = new GMC_Category_Detail_Service();
-		$category_update_service = new GMC_Category_Update_Service();
-		$post_service            = new GMC_Post_Service();
-		$post_category_service   = new GMC_Post_Category_Service();
+		$category_service         = new GMC_Category_Service();
+		$category_detail_service  = new GMC_Category_Detail_Service();
+		$category_update_service  = new GMC_Category_Update_Service();
+		$slug_change_service      = new GMC_Category_Slug_Change_Service();
+		$post_service             = new GMC_Post_Service();
+		$post_category_service    = new GMC_Post_Category_Service();
 
 		$this->admin = new GMC_Admin(
 			$category_service,
 			$category_detail_service,
 			$category_update_service,
+			$slug_change_service,
 			$post_service,
 			$post_category_service
 		);
