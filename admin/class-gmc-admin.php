@@ -14,18 +14,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 class GMC_Admin {
 
 	/**
-	 * Registra la subpágina base dentro de Entradas.
+	 * Registra la página principal del plugin en el menú lateral.
 	 *
 	 * @return void
 	 */
 	public function register_admin_menu() {
-		add_submenu_page(
-			'edit.php',
+		add_menu_page(
 			__( 'Gestión Masiva de Categorías', 'gestion-masiva-categorias' ),
 			__( 'Gestión categorías', 'gestion-masiva-categorias' ),
 			'manage_categories',
 			'gestion-masiva-categorias',
-			array( $this, 'render_admin_page' )
+			array( $this, 'render_admin_page' ),
+			'dashicons-category',
+			58
 		);
 	}
 
@@ -38,11 +39,12 @@ class GMC_Admin {
 		if ( ! current_user_can( 'manage_categories' ) ) {
 			wp_die( esc_html__( 'No tienes permisos para acceder a esta página.', 'gestion-masiva-categorias' ) );
 		}
-
-		echo '<div class="wrap">';
-		echo '<h1>' . esc_html__( 'Gestión Masiva de Categorías', 'gestion-masiva-categorias' ) . '</h1>';
-		echo '<p>' . esc_html__( 'Versión - esqueleto inicial sin lógica', 'gestion-masiva-categorias' ) . '</p>';
-		echo '<p>' . esc_html__( 'La funcionalidad se añadirá en siguientes etapas.', 'gestion-masiva-categorias' ) . '</p>';
-		echo '</div>';
+		?>
+		<div class="wrap">
+			<h1><?php echo esc_html__( 'Gestión Masiva de Categorías', 'gestion-masiva-categorias' ); ?></h1>
+			<p><?php echo esc_html__( 'Versión - pantalla vacía del plugin', 'gestion-masiva-categorias' ); ?></p>
+			<p><?php echo esc_html__( 'Aquí vivirá la funcionalidad del plugin en siguientes etapas.', 'gestion-masiva-categorias' ); ?></p>
+		</div>
+		<?php
 	}
 }
