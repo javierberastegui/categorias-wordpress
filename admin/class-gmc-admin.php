@@ -143,158 +143,38 @@ class GMC_Admin {
 		$this->process_category_action( 'remove' );
 	}
 
-/**
- * Renderiza pantalla separada de mantenimiento de categorías.
- *
- * @return void
- */
-public function render_category_maintenance_page() {
-	if ( ! current_user_can( 'manage_categories' ) ) {
-		wp_die( esc_html__( 'No tienes permisos para acceder a esta página.', 'gestion-masiva-categorias' ) );
+	/**
+	 * Procesa la acción de actualización de categoría.
+	 *
+	 * @return void
+	 */
+	public function handle_update_category_action() {
+		if ( ! current_user_can( 'manage_categories' ) ) {
+			wp_die( esc_html__( 'No tienes permisos para ejecutar esta acción.', 'gestion-masiva-categorias' ) );
+		}
+
+		check_admin_referer( 'gmc_update_category_action', 'gmc_category_nonce' );
+
+		$category_id         = isset( $_POST['gmc_category_id'] ) ? absint( wp_unslash( $_POST['gmc_category_id'] ) ) : 0;
+		$name                = isset( $_POST['gmc_category_name'] ) ? wp_unslash( $_POST['gmc_category_name'] ) : '';
+		$description         = isset( $_POST['gmc_category_description'] ) ? wp_unslash( $_POST['gmc_category_description'] ) : '';
+		$slug                = isset( $_POST['gmc_category_slug'] ) ? wp_unslash( $_POST['gmc_category_slug'] ) : '';
+		$confirm_slug_change = ! empty( $_POST['gmc_confirm_slug_change'] );
+
+		$result = $this->category_update_service->update_category(
+			$category_id,
+			$name,
+			$description,
+			$slug,
+			$confirm_slug_change
+		);
+
+		$this->redirect_to_category_maintenance(
+			$category_id,
+			$result['success'] ? 'success' : 'error',
+			$result['message']
+		);
 	}
-
-	$selected_category_id = isset( $_GET['gmc_category_id'] ) ? absint( wp_unslash( $_GET['gmc_category_id'] ) ) : 0;
-	$categories           = $this->category_service->get_categories( 50 );
-	$category_detail      = null;
-
-	if ( $selected_category_id > 0 ) {
-		$category_detail = $this->category_detail_service->get_category_detail( $selected_category_id );
-	}
-	?>
-	<div class="wrap gmc-admin-page">
-		<div class="gmc-cyber-shell">
-			<div class="gmc-cyber-grid"></div>
-			<div class="gmc-cyber-scanlines"></div>
-
-			<div class="gmc-cyber-content">
-				<div class="gmc-page-header">
-					<h1><?php echo esc_html__( 'Mantenimiento de categorías', 'gestion-masiva-categorias' ); ?></h1>
-					<p class="gmc-page-description">
-						<?php echo esc_html__( 'Edición básica de nombre, descripción y slug de una categoría concreta.', 'gestion-masiva-categorias' ); ?>
-					</p>
-				</div>
-
-				<?php $this->render_notice(); ?>
-
-				<div class="gmc-card" style="margin-bottom:18px;padding:16px;">
-					<form method="get" action="<?php echo esc_url( admin_url( 'admin.php' ) ); ?>">
-						<input type="hidden" name="page" value="gmc-category-maintenance" />
-
-						<label for="gmc_category_id" class="gmc-label">
-							<?php echo esc_html__( 'Selecciona una categoría', 'gestion-masiva-categorias' ); ?>
-						</label>
-
-						<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-							<select id="gmc_category_id" name="gmc_category_id" class="gmc-multiselect" style="min-height:auto;height:42px;max-width:360px;">
-								<option value="0"><?php echo esc_html__( 'Elige una categoría', 'gestion-masiva-categorias' ); ?></option>
-								<?php foreach ( $categories as $category ) : ?>
-									<option value="<?php echo (int) $category['id']; ?>" <?php selected( $selected_category_id, (int) $category['id'] ); ?>>
-										<?php echo esc_html( $category['name'] ); ?>
-									</option>
-								<?php endforeach; ?>
-							</select>
-
-							<button type="submit" class="button gmc-button-secondary">
-								<?php echo esc_html__( 'Ver detalle', 'gestion-masiva-categorias' ); ?>
-							</button>
-						</div>
-					</form>
-				</div>
-
-				<?php if ( $selected_category_id > 0 && ! $category_detail ) : ?>
-					<div class="gmc-card gmc-empty-state">
-						<p><?php echo esc_html__( 'La categoría seleccionada no existe o no está disponible.', 'gestion-masiva-categorias' ); ?></p>
-					</div>
-				<?php elseif ( $category_detail ) : ?>
-					<div class="gmc-card" style="padding:18px;">
-						<h2 style="margin-top:0;"><?php echo esc_html__( 'Editar categoría', 'gestion-masiva-categorias' ); ?></h2>
-
-						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-							<input type="hidden" name="action" value="gmc_update_category" />
-							<input type="hidden" name="gmc_category_id" value="<?php echo (int) $category_detail['id']; ?>" />
-							<?php wp_nonce_field( 'gmc_update_category_action', 'gmc_category_nonce' ); ?>
-
-							<div style="margin-bottom:16px;">
-								<label class="gmc-label" for="gmc_category_name">
-									<?php echo esc_html__( 'Nombre', 'gestion-masiva-categorias' ); ?>
-								</label>
-								<input
-									type="text"
-									id="gmc_category_name"
-									name="gmc_category_name"
-									class="regular-text"
-									value="<?php echo esc_attr( $category_detail['name'] ); ?>"
-								/>
-							</div>
-
-							<div style="margin-bottom:16px;">
-								<label class="gmc-label" for="gmc_category_slug">
-									<?php echo esc_html__( 'Slug', 'gestion-masiva-categorias' ); ?>
-								</label>
-								<input
-									type="text"
-									id="gmc_category_slug"
-									name="gmc_category_slug"
-									class="regular-text"
-									value="<?php echo esc_attr( $category_detail['slug'] ); ?>"
-								/>
-							</div>
-
-							<div style="margin-bottom:16px;padding:12px;border:1px solid rgba(217,70,239,0.25);border-radius:10px;background:rgba(217,70,239,0.08);">
-								<p style="margin-top:0;margin-bottom:10px;">
-									<strong><?php echo esc_html__( 'Aviso sobre cambio de slug', 'gestion-masiva-categorias' ); ?></strong>
-								</p>
-								<p style="margin-top:0;margin-bottom:10px;">
-									<?php echo esc_html__( 'Cambiar el slug modifica la URL de esta categoría. Hazlo solo si realmente quieres alterar su ruta pública.', 'gestion-masiva-categorias' ); ?>
-								</p>
-								<label>
-									<input type="checkbox" name="gmc_confirm_slug_change" value="1" />
-									<?php echo esc_html__( 'Confirmo explícitamente que quiero permitir el cambio de slug si lo he modificado.', 'gestion-masiva-categorias' ); ?>
-								</label>
-							</div>
-
-							<div style="margin-bottom:16px;">
-								<label class="gmc-label" for="gmc_category_description">
-									<?php echo esc_html__( 'Descripción', 'gestion-masiva-categorias' ); ?>
-								</label>
-								<textarea
-									id="gmc_category_description"
-									name="gmc_category_description"
-									rows="6"
-									class="large-text"
-								><?php echo esc_textarea( $category_detail['description'] ); ?></textarea>
-							</div>
-
-							<div style="margin-bottom:16px;">
-								<p><strong><?php echo esc_html__( 'ID:', 'gestion-masiva-categorias' ); ?></strong> <?php echo (int) $category_detail['id']; ?></p>
-								<p><strong><?php echo esc_html__( 'Parent:', 'gestion-masiva-categorias' ); ?></strong>
-									<?php
-									if ( (int) $category_detail['parent_id'] > 0 ) {
-										echo esc_html( $category_detail['parent_name'] . ' (#' . (int) $category_detail['parent_id'] . ')' );
-									} else {
-										echo esc_html__( 'Sin parent.', 'gestion-masiva-categorias' );
-									}
-									?>
-								</p>
-							</div>
-
-							<p style="margin-bottom:0;">
-								<button type="submit" class="button button-primary gmc-button-primary">
-									<?php echo esc_html__( 'Guardar cambios', 'gestion-masiva-categorias' ); ?>
-								</button>
-							</p>
-						</form>
-					</div>
-				<?php else : ?>
-					<div class="gmc-card gmc-empty-state">
-						<p><?php echo esc_html__( 'Selecciona una categoría para editar su detalle.', 'gestion-masiva-categorias' ); ?></p>
-					</div>
-				<?php endif; ?>
-			</div>
-		</div>
-	</div>
-	<?php
-}
 
 	/**
 	 * Renderiza la pantalla principal orientada a posts.
@@ -644,6 +524,19 @@ public function render_category_maintenance_page() {
 										class="regular-text"
 										value="<?php echo esc_attr( $category_detail['slug'] ); ?>"
 									/>
+								</div>
+
+								<div style="margin-bottom:16px;padding:12px;border:1px solid rgba(217,70,239,0.25);border-radius:10px;background:rgba(217,70,239,0.08);">
+									<p style="margin-top:0;margin-bottom:10px;">
+										<strong><?php echo esc_html__( 'Aviso sobre cambio de slug', 'gestion-masiva-categorias' ); ?></strong>
+									</p>
+									<p style="margin-top:0;margin-bottom:10px;">
+										<?php echo esc_html__( 'Cambiar el slug modifica la URL de esta categoría. Hazlo solo si realmente quieres alterar su ruta pública.', 'gestion-masiva-categorias' ); ?>
+									</p>
+									<label>
+										<input type="checkbox" name="gmc_confirm_slug_change" value="1" />
+										<?php echo esc_html__( 'Confirmo explícitamente que quiero permitir el cambio de slug si lo he modificado.', 'gestion-masiva-categorias' ); ?>
+									</label>
 								</div>
 
 								<div style="margin-bottom:16px;">
