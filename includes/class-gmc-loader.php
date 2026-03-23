@@ -53,8 +53,6 @@ class GMC_Loader {
 	/**
 	 * Método de arranque.
 	 *
-	 * En esta etapa no necesita ejecutar lógica adicional.
-	 *
 	 * @return void
 	 */
 	public function run() {
