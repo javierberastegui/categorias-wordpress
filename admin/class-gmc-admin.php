@@ -179,7 +179,7 @@ class GMC_Admin {
 					<?php foreach ( $posts as $post_item ) : ?>
 						<div class="gmc-post-row" style="margin-bottom:12px;padding:10px 0;border-bottom:1px solid #ddd;">
 							<div style="display:flex;gap:12px;align-items:flex-start;">
-								div style="padding-top:2px;">
+								<div style="padding-top:2px;">
 									<input
 										type="checkbox"
 										class="gmc-post-checkbox"
