@@ -332,6 +332,7 @@ class GMC_Admin {
 								<?php
 								echo esc_html(
 									sprintf(
+										/* translators: 1: current page number, 2: total pages. */
 										__( 'Página %1$d de %2$d.', 'gestion-masiva-categorias' ),
 										(int) $pagination['current_page'],
 										max( 1, $total_pages )
@@ -359,6 +360,7 @@ class GMC_Admin {
 													<?php
 													echo esc_html(
 														sprintf(
+															/* translators: %s: post status. */
 															__( 'Estado: %s', 'gestion-masiva-categorias' ),
 															(string) $post_item['status']
 														)
@@ -639,6 +641,7 @@ class GMC_Admin {
 				<?php
 				echo esc_html(
 					sprintf(
+						/* translators: 1: current page number, 2: total pages. */
 						__( 'Página %1$d de %2$d', 'gestion-masiva-categorias' ),
 						$current_page,
 						$total_pages
