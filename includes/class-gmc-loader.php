@@ -4,6 +4,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+require_once GMC_PLUGIN_PATH . 'includes/class-gmc-category-service.php';
 require_once GMC_PLUGIN_PATH . 'admin/class-gmc-admin.php';
 
 /**
@@ -23,6 +24,13 @@ class GMC_Loader {
 	private $admin;
 
 	/**
+	 * Servicio de categorías.
+	 *
+	 * @var GMC_Category_Service
+	 */
+	private $category_service;
+
+	/**
 	 * Constructor.
 	 */
 	public function __construct() {
@@ -36,7 +44,8 @@ class GMC_Loader {
 	 * @return void
 	 */
 	private function load_dependencies() {
-		$this->admin = new GMC_Admin();
+		$this->category_service = new GMC_Category_Service();
+		$this->admin            = new GMC_Admin( $this->category_service );
 	}
 
 	/**
