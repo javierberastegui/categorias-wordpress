@@ -16,17 +16,28 @@ class GMC_Admin {
 	/**
 	 * Servicio de categorías.
 	 *
+	 * Se mantiene como apoyo futuro.
+	 *
 	 * @var GMC_Category_Service
 	 */
 	private $category_service;
 
 	/**
+	 * Servicio de posts.
+	 *
+	 * @var GMC_Post_Service
+	 */
+	private $post_service;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param GMC_Category_Service $category_service Servicio de categorías.
+	 * @param GMC_Post_Service     $post_service     Servicio de posts.
 	 */
-	public function __construct( GMC_Category_Service $category_service ) {
+	public function __construct( GMC_Category_Service $category_service, GMC_Post_Service $post_service ) {
 		$this->category_service = $category_service;
+		$this->post_service     = $post_service;
 	}
 
 	/**
@@ -47,7 +58,7 @@ class GMC_Admin {
 	}
 
 	/**
-	 * Renderiza la pantalla base con listado de categorías.
+	 * Renderiza la pantalla principal orientada a posts.
 	 *
 	 * @return void
 	 */
@@ -56,47 +67,58 @@ class GMC_Admin {
 			wp_die( esc_html__( 'No tienes permisos para acceder a esta página.', 'gestion-masiva-categorias' ) );
 		}
 
-		$categories = $this->category_service->get_categories( 50 );
+		$posts = $this->post_service->get_posts( 20 );
 		?>
 		<div class="wrap">
 			<h1><?php echo esc_html__( 'Gestión Masiva de Categorías', 'gestion-masiva-categorias' ); ?></h1>
-			<p><?php echo esc_html__( 'Versión - visualización básica de categorías', 'gestion-masiva-categorias' ); ?></p>
+			<p><?php echo esc_html__( 'Versión - listado base de posts con categorías actuales', 'gestion-masiva-categorias' ); ?></p>
 
-			<?php if ( empty( $categories ) ) : ?>
-				<p><?php echo esc_html__( 'No se encontraron categorías para mostrar.', 'gestion-masiva-categorias' ); ?></p>
+			<?php if ( empty( $posts ) ) : ?>
+				<p><?php echo esc_html__( 'No se encontraron posts para mostrar.', 'gestion-masiva-categorias' ); ?></p>
 			<?php else : ?>
-				<p><?php echo esc_html__( 'Mostrando hasta 50 categorías.', 'gestion-masiva-categorias' ); ?></p>
+				<p><?php echo esc_html__( 'Mostrando hasta 20 posts estándar.', 'gestion-masiva-categorias' ); ?></p>
 
-				<div class="gmc-category-list">
-					<?php foreach ( $categories as $category ) : ?>
-						<div class="gmc-category-row" style="margin-bottom:10px;padding:8px 0;border-bottom:1px solid #ddd;">
-							<label>
+				<div class="gmc-post-list">
+					<?php foreach ( $posts as $post_item ) : ?>
+						<div class="gmc-post-row" style="margin-bottom:12px;padding:10px 0;border-bottom:1px solid #ddd;">
+							<label style="display:block;margin-bottom:4px;">
 								<input
 									type="checkbox"
-									name="gmc_selected_categories[]"
-									value="<?php echo (int) $category['id']; ?>"
+									name="gmc_selected_posts[]"
+									value="<?php echo (int) $post_item['id']; ?>"
 									disabled
 								/>
-								<strong><?php echo esc_html( $category['name'] ); ?></strong>
+								<strong><?php echo esc_html( $post_item['title'] ); ?></strong>
 							</label>
 
-							<?php if ( ! empty( $category['parent'] ) ) : ?>
-								<span>
+							<p style="margin:0 0 4px 24px;">
+								<?php
+								echo esc_html(
+									sprintf(
+										/* translators: %s: post status. */
+										__( 'Estado: %s', 'gestion-masiva-categorias' ),
+										(string) $post_item['status']
+									)
+								);
+								?>
+							</p>
+
+							<p style="margin:0 0 0 24px;">
+								<strong><?php echo esc_html__( 'Categorías actuales:', 'gestion-masiva-categorias' ); ?></strong>
+								<?php if ( empty( $post_item['categories'] ) ) : ?>
+									<?php echo esc_html__( ' Sin categorías asignadas.', 'gestion-masiva-categorias' ); ?>
+								<?php else : ?>
 									<?php
-									echo esc_html(
-										sprintf(
-											/* translators: %d: parent category ID. */
-											__( ' — Padre ID: %d', 'gestion-masiva-categorias' ),
-											(int) $category['parent']
-										)
-									);
+									$category_names = array();
+
+									foreach ( $post_item['categories'] as $category ) {
+										$category_names[] = $category['name'];
+									}
+
+									echo esc_html( ' ' . implode( ', ', $category_names ) );
 									?>
-								</span>
-							<?php else : ?>
-								<span>
-									<?php echo esc_html__( ' — Sin padre', 'gestion-masiva-categorias' ); ?>
-								</span>
-							<?php endif; ?>
+								<?php endif; ?>
+							</p>
 						</div>
 					<?php endforeach; ?>
 				</div>
