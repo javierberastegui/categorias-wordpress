@@ -6,6 +6,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 require_once GMC_PLUGIN_PATH . 'includes/class-gmc-category-service.php';
 require_once GMC_PLUGIN_PATH . 'includes/class-gmc-post-service.php';
+require_once GMC_PLUGIN_PATH . 'includes/class-gmc-post-category-service.php';
 require_once GMC_PLUGIN_PATH . 'admin/class-gmc-admin.php';
 
 /**
@@ -39,6 +40,13 @@ class GMC_Loader {
 	private $post_service;
 
 	/**
+	 * Servicio de relación post-categoría.
+	 *
+	 * @var GMC_Post_Category_Service
+	 */
+	private $post_category_service;
+
+	/**
 	 * Constructor.
 	 */
 	public function __construct() {
@@ -52,9 +60,14 @@ class GMC_Loader {
 	 * @return void
 	 */
 	private function load_dependencies() {
-		$this->category_service = new GMC_Category_Service();
-		$this->post_service     = new GMC_Post_Service();
-		$this->admin            = new GMC_Admin( $this->category_service, $this->post_service );
+		$this->category_service      = new GMC_Category_Service();
+		$this->post_service          = new GMC_Post_Service();
+		$this->post_category_service = new GMC_Post_Category_Service();
+		$this->admin                 = new GMC_Admin(
+			$this->category_service,
+			$this->post_service,
+			$this->post_category_service
+		);
 	}
 
 	/**
@@ -65,6 +78,7 @@ class GMC_Loader {
 	private function define_admin_hooks() {
 		if ( is_admin() ) {
 			add_action( 'admin_menu', array( $this->admin, 'register_admin_menu' ) );
+			add_action( 'admin_post_gmc_add_categories', array( $this->admin, 'handle_add_categories_action' ) );
 		}
 	}
 
