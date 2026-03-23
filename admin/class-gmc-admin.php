@@ -11,6 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * - Registrar el punto de entrada del admin.
  * - Renderizar la pantalla del plugin.
  * - Coordinar los handlers del formulario del admin.
+ * - Cargar assets solo en la pantalla del plugin.
  */
 class GMC_Admin {
 
@@ -50,6 +51,8 @@ class GMC_Admin {
 		$this->category_service      = $category_service;
 		$this->post_service          = $post_service;
 		$this->post_category_service = $post_category_service;
+
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
 	}
 
 	/**
@@ -66,6 +69,25 @@ class GMC_Admin {
 			array( $this, 'render_admin_page' ),
 			'dashicons-category',
 			58
+		);
+	}
+
+	/**
+	 * Carga estilos solo en la pantalla del plugin.
+	 *
+	 * @param string $hook_suffix Hook actual del admin.
+	 * @return void
+	 */
+	public function enqueue_admin_assets( $hook_suffix ) {
+		if ( 'toplevel_page_gestion-masiva-categorias' !== $hook_suffix ) {
+			return;
+		}
+
+		wp_enqueue_style(
+			'gmc-admin',
+			GMC_PLUGIN_URL . 'admin/css/gmc-admin.css',
+			array(),
+			GMC_PLUGIN_VERSION
 		);
 	}
 
@@ -100,163 +122,189 @@ class GMC_Admin {
 		$posts      = $this->post_service->get_posts( 20 );
 		$categories = $this->category_service->get_categories( 50 );
 		?>
-		<div class="wrap">
-			<h1><?php echo esc_html__( 'Gestión Masiva de Categorías', 'gestion-masiva-categorias' ); ?></h1>
-			<p><?php echo esc_html__( 'Versión - segunda acción real (remove)', 'gestion-masiva-categorias' ); ?></p>
+		<div class="wrap gmc-admin-page">
+			<div class="gmc-page-header">
+				<h1><?php echo esc_html__( 'Gestión Masiva de Categorías', 'gestion-masiva-categorias' ); ?></h1>
+				<p class="gmc-page-description">
+					<?php echo esc_html__( 'Versión - capa UI sin tocar lógica', 'gestion-masiva-categorias' ); ?>
+				</p>
+			</div>
 
 			<?php $this->render_notice(); ?>
 
-			<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;margin:16px 0;">
-				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin:0;padding:12px;background:#fff;border:1px solid #dcdcde;min-width:320px;">
+			<div class="gmc-action-grid">
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="gmc-card gmc-action-card">
 					<input type="hidden" name="action" value="gmc_add_categories" />
 					<?php wp_nonce_field( 'gmc_add_categories_action', 'gmc_nonce' ); ?>
 
-					<h2 style="margin-top:0;"><?php echo esc_html__( 'Añadir categorías', 'gestion-masiva-categorias' ); ?></h2>
+					<div class="gmc-card-header">
+						<h2><?php echo esc_html__( 'Añadir categorías', 'gestion-masiva-categorias' ); ?></h2>
+						<p><?php echo esc_html__( 'Suma una o varias categorías a los posts seleccionados sin eliminar las ya existentes.', 'gestion-masiva-categorias' ); ?></p>
+					</div>
 
-					<label for="gmc_add_category_ids" style="display:block;margin-bottom:8px;">
-						<?php echo esc_html__( 'Selecciona una o varias categorías', 'gestion-masiva-categorias' ); ?>
-					</label>
+					<div class="gmc-card-body">
+						<label for="gmc_add_category_ids" class="gmc-label">
+							<?php echo esc_html__( 'Selecciona una o varias categorías', 'gestion-masiva-categorias' ); ?>
+						</label>
 
-					<select
-						id="gmc_add_category_ids"
-						name="gmc_category_ids[]"
-						multiple="multiple"
-						size="8"
-						style="min-width:320px;max-width:100%;margin-bottom:12px;"
-					>
-						<?php foreach ( $categories as $category ) : ?>
-							<option value="<?php echo (int) $category['id']; ?>">
-								<?php echo esc_html( $category['name'] ); ?>
-							</option>
-						<?php endforeach; ?>
-					</select>
+						<select
+							id="gmc_add_category_ids"
+							name="gmc_category_ids[]"
+							multiple="multiple"
+							size="8"
+							class="gmc-multiselect"
+						>
+							<?php foreach ( $categories as $category ) : ?>
+								<option value="<?php echo (int) $category['id']; ?>">
+									<?php echo esc_html( $category['name'] ); ?>
+								</option>
+							<?php endforeach; ?>
+						</select>
+					</div>
 
-					<p style="margin:0;">
+					<div class="gmc-card-footer">
 						<button type="submit" class="button button-primary">
 							<?php echo esc_html__( 'Añadir categorías', 'gestion-masiva-categorias' ); ?>
 						</button>
-					</p>
+					</div>
 				</form>
 
-				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin:0;padding:12px;background:#fff;border:1px solid #dcdcde;min-width:320px;">
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="gmc-card gmc-action-card">
 					<input type="hidden" name="action" value="gmc_remove_categories" />
 					<?php wp_nonce_field( 'gmc_remove_categories_action', 'gmc_nonce' ); ?>
 
-					<h2 style="margin-top:0;"><?php echo esc_html__( 'Quitar categorías', 'gestion-masiva-categorias' ); ?></h2>
+					<div class="gmc-card-header">
+						<h2><?php echo esc_html__( 'Quitar categorías', 'gestion-masiva-categorias' ); ?></h2>
+						<p><?php echo esc_html__( 'Elimina solo las categorías seleccionadas de los posts marcados, manteniendo las demás.', 'gestion-masiva-categorias' ); ?></p>
+					</div>
 
-					<label for="gmc_remove_category_ids" style="display:block;margin-bottom:8px;">
-						<?php echo esc_html__( 'Selecciona una o varias categorías', 'gestion-masiva-categorias' ); ?>
-					</label>
+					<div class="gmc-card-body">
+						<label for="gmc_remove_category_ids" class="gmc-label">
+							<?php echo esc_html__( 'Selecciona una o varias categorías', 'gestion-masiva-categorias' ); ?>
+						</label>
 
-					<select
-						id="gmc_remove_category_ids"
-						name="gmc_category_ids[]"
-						multiple="multiple"
-						size="8"
-						style="min-width:320px;max-width:100%;margin-bottom:12px;"
-					>
-						<?php foreach ( $categories as $category ) : ?>
-							<option value="<?php echo (int) $category['id']; ?>">
-								<?php echo esc_html( $category['name'] ); ?>
-							</option>
-						<?php endforeach; ?>
-					</select>
+						<select
+							id="gmc_remove_category_ids"
+							name="gmc_category_ids[]"
+							multiple="multiple"
+							size="8"
+							class="gmc-multiselect"
+						>
+							<?php foreach ( $categories as $category ) : ?>
+								<option value="<?php echo (int) $category['id']; ?>">
+									<?php echo esc_html( $category['name'] ); ?>
+								</option>
+							<?php endforeach; ?>
+						</select>
+					</div>
 
-					<p style="margin:0;">
+					<div class="gmc-card-footer">
 						<button type="submit" class="button">
 							<?php echo esc_html__( 'Quitar categorías', 'gestion-masiva-categorias' ); ?>
 						</button>
-					</p>
+					</div>
 				</form>
 			</div>
 
-			<?php if ( empty( $posts ) ) : ?>
-				<p><?php echo esc_html__( 'No se encontraron posts para mostrar.', 'gestion-masiva-categorias' ); ?></p>
-			<?php else : ?>
-				<p><?php echo esc_html__( 'Mostrando hasta 20 posts estándar.', 'gestion-masiva-categorias' ); ?></p>
+			<div class="gmc-posts-section">
+				<div class="gmc-section-header">
+					<h2><?php echo esc_html__( 'Posts disponibles', 'gestion-masiva-categorias' ); ?></h2>
+					<p>
+						<?php echo esc_html__( 'Selecciona los posts sobre los que quieres aplicar la acción elegida.', 'gestion-masiva-categorias' ); ?>
+					</p>
+				</div>
 
-				<div class="gmc-post-list">
-					<?php foreach ( $posts as $post_item ) : ?>
-						<div class="gmc-post-row" style="margin-bottom:12px;padding:10px 0;border-bottom:1px solid #ddd;">
-							<div style="display:flex;gap:12px;align-items:flex-start;">
-								<div style="padding-top:2px;">
+				<?php if ( empty( $posts ) ) : ?>
+					<div class="gmc-card gmc-empty-state">
+						<p><?php echo esc_html__( 'No se encontraron posts para mostrar.', 'gestion-masiva-categorias' ); ?></p>
+					</div>
+				<?php else : ?>
+					<p class="gmc-list-meta">
+						<?php echo esc_html__( 'Mostrando hasta 20 posts estándar.', 'gestion-masiva-categorias' ); ?>
+					</p>
+
+					<div class="gmc-post-list">
+						<?php foreach ( $posts as $post_item ) : ?>
+							<div class="gmc-post-row">
+								<div class="gmc-post-select">
 									<input
 										type="checkbox"
 										class="gmc-post-checkbox"
 										value="<?php echo (int) $post_item['id']; ?>"
+										aria-label="<?php echo esc_attr( sprintf( __( 'Seleccionar post %s', 'gestion-masiva-categorias' ), $post_item['title'] ) ); ?>"
 									/>
 								</div>
 
-								<div>
-									<p style="margin:0 0 4px 0;">
-										<strong><?php echo esc_html( $post_item['title'] ); ?></strong>
-									</p>
-
-									<p style="margin:0 0 4px 0;">
-										<?php
-										echo esc_html(
-											sprintf(
-												/* translators: %s: post status. */
-												__( 'Estado: %s', 'gestion-masiva-categorias' ),
-												(string) $post_item['status']
-											)
-										);
-										?>
-									</p>
-
-									<p style="margin:0;">
-										<strong><?php echo esc_html__( 'Categorías actuales:', 'gestion-masiva-categorias' ); ?></strong>
-										<?php if ( empty( $post_item['categories'] ) ) : ?>
-											<?php echo esc_html__( ' Sin categorías asignadas.', 'gestion-masiva-categorias' ); ?>
-										<?php else : ?>
+								<div class="gmc-post-content">
+									<div class="gmc-post-topline">
+										<h3 class="gmc-post-title"><?php echo esc_html( $post_item['title'] ); ?></h3>
+										<span class="gmc-post-status">
 											<?php
-											$category_names = array();
-
-											foreach ( $post_item['categories'] as $category ) {
-												$category_names[] = $category['name'];
-											}
-
-											echo esc_html( ' ' . implode( ', ', $category_names ) );
+											echo esc_html(
+												sprintf(
+													/* translators: %s: post status. */
+													__( 'Estado: %s', 'gestion-masiva-categorias' ),
+													(string) $post_item['status']
+												)
+											);
 											?>
+										</span>
+									</div>
+
+									<div class="gmc-post-categories">
+										<span class="gmc-post-categories-label">
+											<?php echo esc_html__( 'Categorías actuales:', 'gestion-masiva-categorias' ); ?>
+										</span>
+
+										<?php if ( empty( $post_item['categories'] ) ) : ?>
+											<span class="gmc-post-category-empty">
+												<?php echo esc_html__( 'Sin categorías asignadas.', 'gestion-masiva-categorias' ); ?>
+											</span>
+										<?php else : ?>
+											<div class="gmc-category-badges">
+												<?php foreach ( $post_item['categories'] as $category ) : ?>
+													<span class="gmc-category-badge"><?php echo esc_html( $category['name'] ); ?></span>
+												<?php endforeach; ?>
+											</div>
 										<?php endif; ?>
-									</p>
+									</div>
 								</div>
 							</div>
-						</div>
-					<?php endforeach; ?>
-				</div>
+						<?php endforeach; ?>
+					</div>
 
-				<script>
-					document.addEventListener('DOMContentLoaded', function () {
-						const checkboxes = document.querySelectorAll('.gmc-post-checkbox');
-						const forms = document.querySelectorAll('form[action*="admin-post.php"]');
+					<script>
+						document.addEventListener('DOMContentLoaded', function () {
+							const checkboxes = document.querySelectorAll('.gmc-post-checkbox');
+							const forms = document.querySelectorAll('form[action*="admin-post.php"]');
 
-						function syncSelectedPosts() {
-							const selected = Array.from(checkboxes)
-								.filter((checkbox) => checkbox.checked)
-								.map((checkbox) => checkbox.value);
+							function syncSelectedPosts() {
+								const selected = Array.from(checkboxes)
+									.filter((checkbox) => checkbox.checked)
+									.map((checkbox) => checkbox.value);
 
-							forms.forEach((form) => {
-								form.querySelectorAll('input[name="gmc_selected_posts[]"]').forEach((input) => input.remove());
+								forms.forEach((form) => {
+									form.querySelectorAll('input[name="gmc_selected_posts[]"]').forEach((input) => input.remove());
 
-								selected.forEach((postId) => {
-									const hiddenInput = document.createElement('input');
-									hiddenInput.type = 'hidden';
-									hiddenInput.name = 'gmc_selected_posts[]';
-									hiddenInput.value = postId;
-									form.appendChild(hiddenInput);
+									selected.forEach((postId) => {
+										const hiddenInput = document.createElement('input');
+										hiddenInput.type = 'hidden';
+										hiddenInput.name = 'gmc_selected_posts[]';
+										hiddenInput.value = postId;
+										form.appendChild(hiddenInput);
+									});
 								});
+							}
+
+							checkboxes.forEach((checkbox) => {
+								checkbox.addEventListener('change', syncSelectedPosts);
 							});
-						}
 
-						checkboxes.forEach((checkbox) => {
-							checkbox.addEventListener('change', syncSelectedPosts);
+							syncSelectedPosts();
 						});
-
-						syncSelectedPosts();
-					});
-				</script>
-			<?php endif; ?>
+					</script>
+				<?php endif; ?>
+			</div>
 		</div>
 		<?php
 	}
@@ -325,8 +373,8 @@ class GMC_Admin {
 		}
 
 		$allowed_types = array(
-			'success' => 'notice notice-success',
-			'error'   => 'notice notice-error',
+			'success' => 'notice notice-success gmc-notice',
+			'error'   => 'notice notice-error gmc-notice',
 		);
 
 		if ( ! isset( $allowed_types[ $type ] ) ) {
