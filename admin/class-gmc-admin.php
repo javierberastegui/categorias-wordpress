@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Responsabilidad única:
  * - Registrar el punto de entrada del admin.
  * - Renderizar pantallas del plugin.
- * - Coordinar los handlers del formulario del admin.
+ * - Coordinar los handlers del admin.
  * - Cargar assets solo en la pantalla del plugin.
  */
 class GMC_Admin {
@@ -28,6 +28,13 @@ class GMC_Admin {
 	 * @var GMC_Category_Detail_Service
 	 */
 	private $category_detail_service;
+
+	/**
+	 * Servicio de actualización de categoría.
+	 *
+	 * @var GMC_Category_Update_Service
+	 */
+	private $category_update_service;
 
 	/**
 	 * Servicio de posts.
@@ -48,17 +55,20 @@ class GMC_Admin {
 	 *
 	 * @param GMC_Category_Service        $category_service        Servicio de categorías.
 	 * @param GMC_Category_Detail_Service $category_detail_service Servicio de detalle de categoría.
+	 * @param GMC_Category_Update_Service $category_update_service Servicio de actualización de categoría.
 	 * @param GMC_Post_Service            $post_service            Servicio de posts.
 	 * @param GMC_Post_Category_Service   $post_category_service   Servicio de relación post-categoría.
 	 */
 	public function __construct(
 		GMC_Category_Service $category_service,
 		GMC_Category_Detail_Service $category_detail_service,
+		GMC_Category_Update_Service $category_update_service,
 		GMC_Post_Service $post_service,
 		GMC_Post_Category_Service $post_category_service
 	) {
 		$this->category_service        = $category_service;
 		$this->category_detail_service = $category_detail_service;
+		$this->category_update_service = $category_update_service;
 		$this->post_service            = $post_service;
 		$this->post_category_service   = $post_category_service;
 
@@ -131,6 +141,37 @@ class GMC_Admin {
 	 */
 	public function handle_remove_categories_action() {
 		$this->process_category_action( 'remove' );
+	}
+
+	/**
+	 * Procesa la acción de actualización de categoría.
+	 *
+	 * @return void
+	 */
+	public function handle_update_category_action() {
+		if ( ! current_user_can( 'manage_categories' ) ) {
+			wp_die( esc_html__( 'No tienes permisos para ejecutar esta acción.', 'gestion-masiva-categorias' ) );
+		}
+
+		check_admin_referer( 'gmc_update_category_action', 'gmc_category_nonce' );
+
+		$category_id = isset( $_POST['gmc_category_id'] ) ? absint( wp_unslash( $_POST['gmc_category_id'] ) ) : 0;
+		$name        = isset( $_POST['gmc_category_name'] ) ? wp_unslash( $_POST['gmc_category_name'] ) : '';
+		$description = isset( $_POST['gmc_category_description'] ) ? wp_unslash( $_POST['gmc_category_description'] ) : '';
+		$slug        = isset( $_POST['gmc_category_slug'] ) ? wp_unslash( $_POST['gmc_category_slug'] ) : '';
+
+		$result = $this->category_update_service->update_category(
+			$category_id,
+			$name,
+			$description,
+			$slug
+		);
+
+		$this->redirect_to_category_maintenance(
+			$category_id,
+			$result['success'] ? 'success' : 'error',
+			$result['message']
+		);
 	}
 
 	/**
@@ -413,9 +454,11 @@ class GMC_Admin {
 					<div class="gmc-page-header">
 						<h1><?php echo esc_html__( 'Mantenimiento de categorías', 'gestion-masiva-categorias' ); ?></h1>
 						<p class="gmc-page-description">
-							<?php echo esc_html__( 'Vista separada para trabajar una categoría concreta como entidad, en solo lectura por ahora.', 'gestion-masiva-categorias' ); ?>
+							<?php echo esc_html__( 'Edición básica de nombre, descripción y slug de una categoría concreta.', 'gestion-masiva-categorias' ); ?>
 						</p>
 					</div>
+
+					<?php $this->render_notice(); ?>
 
 					<div class="gmc-card" style="margin-bottom:18px;padding:16px;">
 						<form method="get" action="<?php echo esc_url( admin_url( 'admin.php' ) ); ?>">
@@ -448,37 +491,74 @@ class GMC_Admin {
 						</div>
 					<?php elseif ( $category_detail ) : ?>
 						<div class="gmc-card" style="padding:18px;">
-							<h2 style="margin-top:0;"><?php echo esc_html__( 'Detalle de categoría', 'gestion-masiva-categorias' ); ?></h2>
+							<h2 style="margin-top:0;"><?php echo esc_html__( 'Editar categoría', 'gestion-masiva-categorias' ); ?></h2>
 
-							<div class="gmc-post-list">
-								<div class="gmc-post-row">
-									<div class="gmc-post-content">
-										<p><strong><?php echo esc_html__( 'ID:', 'gestion-masiva-categorias' ); ?></strong> <?php echo (int) $category_detail['id']; ?></p>
-										<p><strong><?php echo esc_html__( 'Nombre:', 'gestion-masiva-categorias' ); ?></strong> <?php echo esc_html( $category_detail['name'] ); ?></p>
-										<p><strong><?php echo esc_html__( 'Slug:', 'gestion-masiva-categorias' ); ?></strong> <?php echo esc_html( $category_detail['slug'] ); ?></p>
-										<p><strong><?php echo esc_html__( 'Descripción:', 'gestion-masiva-categorias' ); ?></strong>
-											<?php
-											echo '' !== $category_detail['description']
-												? esc_html( $category_detail['description'] )
-												: esc_html__( 'Sin descripción.', 'gestion-masiva-categorias' );
-											?>
-										</p>
-										<p><strong><?php echo esc_html__( 'Parent:', 'gestion-masiva-categorias' ); ?></strong>
-											<?php
-											if ( (int) $category_detail['parent_id'] > 0 ) {
-												echo esc_html( $category_detail['parent_name'] . ' (#' . (int) $category_detail['parent_id'] . ')' );
-											} else {
-												echo esc_html__( 'Sin parent.', 'gestion-masiva-categorias' );
-											}
-											?>
-										</p>
-									</div>
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+								<input type="hidden" name="action" value="gmc_update_category" />
+								<input type="hidden" name="gmc_category_id" value="<?php echo (int) $category_detail['id']; ?>" />
+								<?php wp_nonce_field( 'gmc_update_category_action', 'gmc_category_nonce' ); ?>
+
+								<div style="margin-bottom:16px;">
+									<label class="gmc-label" for="gmc_category_name">
+										<?php echo esc_html__( 'Nombre', 'gestion-masiva-categorias' ); ?>
+									</label>
+									<input
+										type="text"
+										id="gmc_category_name"
+										name="gmc_category_name"
+										class="regular-text"
+										value="<?php echo esc_attr( $category_detail['name'] ); ?>"
+									/>
 								</div>
-							</div>
+
+								<div style="margin-bottom:16px;">
+									<label class="gmc-label" for="gmc_category_slug">
+										<?php echo esc_html__( 'Slug', 'gestion-masiva-categorias' ); ?>
+									</label>
+									<input
+										type="text"
+										id="gmc_category_slug"
+										name="gmc_category_slug"
+										class="regular-text"
+										value="<?php echo esc_attr( $category_detail['slug'] ); ?>"
+									/>
+								</div>
+
+								<div style="margin-bottom:16px;">
+									<label class="gmc-label" for="gmc_category_description">
+										<?php echo esc_html__( 'Descripción', 'gestion-masiva-categorias' ); ?>
+									</label>
+									<textarea
+										id="gmc_category_description"
+										name="gmc_category_description"
+										rows="6"
+										class="large-text"
+									><?php echo esc_textarea( $category_detail['description'] ); ?></textarea>
+								</div>
+
+								<div style="margin-bottom:16px;">
+									<p><strong><?php echo esc_html__( 'ID:', 'gestion-masiva-categorias' ); ?></strong> <?php echo (int) $category_detail['id']; ?></p>
+									<p><strong><?php echo esc_html__( 'Parent:', 'gestion-masiva-categorias' ); ?></strong>
+										<?php
+										if ( (int) $category_detail['parent_id'] > 0 ) {
+											echo esc_html( $category_detail['parent_name'] . ' (#' . (int) $category_detail['parent_id'] . ')' );
+										} else {
+											echo esc_html__( 'Sin parent.', 'gestion-masiva-categorias' );
+										}
+										?>
+									</p>
+								</div>
+
+								<p style="margin-bottom:0;">
+									<button type="submit" class="button button-primary gmc-button-primary">
+										<?php echo esc_html__( 'Guardar cambios', 'gestion-masiva-categorias' ); ?>
+									</button>
+								</p>
+							</form>
 						</div>
 					<?php else : ?>
 						<div class="gmc-card gmc-empty-state">
-							<p><?php echo esc_html__( 'Selecciona una categoría para ver su detalle.', 'gestion-masiva-categorias' ); ?></p>
+							<p><?php echo esc_html__( 'Selecciona una categoría para editar su detalle.', 'gestion-masiva-categorias' ); ?></p>
 						</div>
 					<?php endif; ?>
 				</div>
@@ -562,7 +642,7 @@ class GMC_Admin {
 	}
 
 	/**
-	 * Procesa acción de categorías.
+	 * Procesa acción de categorías para posts.
 	 *
 	 * @param string $operation Tipo de operación.
 	 * @return void
@@ -640,7 +720,7 @@ class GMC_Admin {
 	}
 
 	/**
-	 * Redirige a la pantalla del plugin con aviso.
+	 * Redirige a la pantalla principal del plugin con aviso.
 	 *
 	 * @param string $type    Tipo de aviso.
 	 * @param string $message Mensaje.
@@ -653,6 +733,36 @@ class GMC_Admin {
 				'gmc_notice'  => sanitize_key( $type ),
 				'gmc_message' => rawurlencode( $message ),
 			),
+			admin_url( 'admin.php' )
+		);
+
+		wp_safe_redirect( $url );
+		exit;
+	}
+
+	/**
+	 * Redirige a la pantalla de mantenimiento de categorías con aviso.
+	 *
+	 * @param int    $category_id ID de categoría.
+	 * @param string $type        Tipo de aviso.
+	 * @param string $message     Mensaje.
+	 * @return void
+	 */
+	private function redirect_to_category_maintenance( $category_id, $type, $message ) {
+		$args = array(
+			'page'        => 'gmc-category-maintenance',
+			'gmc_notice'  => sanitize_key( $type ),
+			'gmc_message' => rawurlencode( $message ),
+		);
+
+		$category_id = absint( $category_id );
+
+		if ( $category_id > 0 ) {
+			$args['gmc_category_id'] = $category_id;
+		}
+
+		$url = add_query_arg(
+			$args,
 			admin_url( 'admin.php' )
 		);
 
